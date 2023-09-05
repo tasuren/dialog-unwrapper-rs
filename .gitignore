@@ -1,0 +1,11 @@
+# Editor
+*.code-workspace
+*.sublime-project
+*.subilme-workspace
+
+# macOS
+.DS_Store
+
+# Project
+/target
+/Cargo.lock
