@@ -5,20 +5,16 @@ use std::{
 
 use anyhow::Error;
 
-use rfd::{AsyncMessageDialog, MessageDialog};
 pub use rfd;
+use rfd::{AsyncMessageDialog, MessageDialog};
 
-/// 予期せぬエラーを示す文字列を取得する関数。
-pub static GET_UNEXPECTED_ERROR_TEXT: OnceLock<Box<dyn Fn() -> String + Send + Sync>> =
-    OnceLock::new();
-/// 予期せぬエラーであることを示す文字列を格納するためのグローバル変数。
-/// 代わりに`GET_UNEXPECTED_ERROR_TEXT`で動的に変更可能。
-pub static UNEXPECTED_ERROR_TEXT: OnceLock<String> = OnceLock::new();
+/// ダイアログのデフォルトのタイトルです。
+pub static DEFAULT_TITLE: OnceLock<String> = OnceLock::new();
 
-/// `GET_UNEXPECTED_ERROR_TEXT`を使って予期せぬエラーのタイトルを取得します。
+/// `get_title`を使って予期せぬエラーのタイトルを取得します。
 /// もし設定されていない場合、デフォルトの"Unexpected Error"が取得されます。
-pub fn get_unexpected_error_text() -> String {
-    GET_UNEXPECTED_ERROR_TEXT.get_or_init(|| Box::new(|| String::from("Unexpected Error")))()
+pub fn get_title() -> &'static str {
+    &DEFAULT_TITLE.get_or_init(|| String::from("Unexpected Error"))
 }
 
 pub trait ErrorDialogUnwrapper<T, E = Error>: Sized {
@@ -29,21 +25,21 @@ pub trait ErrorDialogUnwrapper<T, E = Error>: Sized {
     fn ok_unwrap_or_dialog_with_title(self, title: impl Display) -> Option<T>;
 }
 
-pub fn show_error_dialog(title: String, e: impl Debug, async_: bool) -> (String, String) {
+pub fn show_error_dialog(title: &str, e: impl Debug, async_: bool) -> (&str, String) {
     let text = format!("{:?}", e);
 
     if async_ {
         let dialog = AsyncMessageDialog::new();
-        let _ = dialog.set_title(&title).set_description(&text).show();
+        let _ = dialog.set_title(title).set_description(&text).show();
     } else {
         let dialog = MessageDialog::new();
-        dialog.set_title(&title).set_description(&text).show();
+        dialog.set_title(title).set_description(&text).show();
     };
 
     (title, text)
 }
 
-fn quick_panic((title, text): (String, String)) -> ! {
+fn quick_panic((title, text): (&str, String)) -> ! {
     panic!("{}: {}", title, text)
 }
 
@@ -51,14 +47,14 @@ impl<T, E: Debug> ErrorDialogUnwrapper<T, E> for Result<T, E> {
     fn unwrap_or_dialog(self) -> T {
         match self {
             Ok(v) => v,
-            Err(e) => quick_panic(show_error_dialog(get_unexpected_error_text(), e, false)),
+            Err(e) => quick_panic(show_error_dialog(get_title(), e, false)),
         }
     }
 
     fn unwrap_or_dialog_with_title(self, title: impl Display) -> T {
         match self {
             Ok(v) => v,
-            Err(e) => quick_panic(show_error_dialog(format!("{}", title), e, false)),
+            Err(e) => quick_panic(show_error_dialog(&format!("{}", title), e, false)),
         }
     }
 
@@ -66,7 +62,7 @@ impl<T, E: Debug> ErrorDialogUnwrapper<T, E> for Result<T, E> {
         match self {
             Ok(v) => Some(v),
             Err(e) => {
-                show_error_dialog(get_unexpected_error_text(), e, true);
+                show_error_dialog(get_title(), e, true);
                 None
             }
         }
@@ -76,7 +72,7 @@ impl<T, E: Debug> ErrorDialogUnwrapper<T, E> for Result<T, E> {
         match self {
             Ok(v) => Some(v),
             Err(e) => {
-                show_error_dialog(format!("{}", title), e, true);
+                show_error_dialog(&format!("{}", title), e, true);
                 None
             }
         }
