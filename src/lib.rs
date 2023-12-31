@@ -1,6 +1,9 @@
 use std::{
     fmt::{Debug, Display},
-    sync::OnceLock,
+    sync::{
+        atomic::{AtomicU16, AtomicUsize, Ordering},
+        OnceLock,
+    },
 };
 
 use anyhow::Error;
@@ -25,6 +28,9 @@ pub trait ErrorDialogUnwrapper<T, E = Error>: Sized {
     fn ok_unwrap_or_dialog_with_title(self, title: impl Display) -> Option<T>;
 }
 
+/// エラーの説明の最大文字数。これ以上は`...`に置き換えられます。
+pub static MAX_ERROR_TEXT_LENGTH: AtomicUsize = AtomicUsize::new(512);
+
 fn truncate(text: &str, index: usize) -> &str {
     match text.char_indices().nth(index) {
         Some((index, _)) => &text[..index],
@@ -34,7 +40,10 @@ fn truncate(text: &str, index: usize) -> &str {
 
 pub fn show_error_dialog(title: &str, e: impl Debug, async_: bool) -> (&str, String) {
     let text = format!("{:?}", e);
-    let text_for_dialog = format!("{}...", truncate(&text, 253));
+    let text_for_dialog = format!(
+        "{}...",
+        truncate(&text, MAX_ERROR_TEXT_LENGTH.load(Ordering::SeqCst))
+    );
 
     if async_ {
         let dialog = AsyncMessageDialog::new();
