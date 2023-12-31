@@ -25,15 +25,29 @@ pub trait ErrorDialogUnwrapper<T, E = Error>: Sized {
     fn ok_unwrap_or_dialog_with_title(self, title: impl Display) -> Option<T>;
 }
 
+fn truncate(text: &str, index: usize) -> &str {
+    match text.char_indices().nth(index) {
+        Some((index, _)) => &text[..index],
+        None => text,
+    }
+}
+
 pub fn show_error_dialog(title: &str, e: impl Debug, async_: bool) -> (&str, String) {
     let text = format!("{:?}", e);
+    let text_for_dialog = format!("{}...", truncate(&text, 253));
 
     if async_ {
         let dialog = AsyncMessageDialog::new();
-        let _ = dialog.set_title(title).set_description(&text).show();
+        let _ = dialog
+            .set_title(title)
+            .set_description(&text_for_dialog)
+            .show();
     } else {
         let dialog = MessageDialog::new();
-        dialog.set_title(title).set_description(&text).show();
+        dialog
+            .set_title(title)
+            .set_description(&text_for_dialog)
+            .show();
     };
 
     (title, text)
