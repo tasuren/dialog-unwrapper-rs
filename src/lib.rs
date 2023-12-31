@@ -1,7 +1,7 @@
 use std::{
     fmt::{Debug, Display},
     sync::{
-        atomic::{AtomicU16, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
         OnceLock,
     },
 };
