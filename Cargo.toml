@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.78"
 once_cell = "1.19.0"
-rfd = "0.14.0"
+rfd = "0.15.0"
